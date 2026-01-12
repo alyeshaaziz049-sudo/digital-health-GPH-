@@ -74,7 +74,7 @@ ui <- fluidPage(
     column(
       12,
       h4("Distribution of Selected Metric"),
-      plotOutput("histogram", height = "400px")
+      plotOutput("histrogram", height = "400px")
     )
   ),
   
