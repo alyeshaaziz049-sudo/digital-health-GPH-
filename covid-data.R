@@ -1,15 +1,16 @@
+    # ---------- library ----------
 library(shiny)
 library(ggplot2)
 library(readr)
-
-# Load data
+library(tidyverse)
+library(dplyr)    
+    #--------- Load data-----------
 covid <- read_csv("COVID19_state.csv", show_col_types = FALSE)
-
 ui <- fluidPage(
   
   titlePanel("State-Level COVID-19 Impact Dashboard"),
   
-  # ---------- TOP FILTER BAR ----------
+   # ---------- TOP FILTER BAR ----------
   fluidRow(
     column(
       4,
@@ -42,17 +43,6 @@ ui <- fluidPage(
   ),
   
   hr(),
-  
-  # ---------- STORY ----------
-  fluidRow(
-    column(
-      12,
-      strong("Analytical Story:"),
-      textOutput("story")
-    )
-  ),
-  hr(),
-  
   # ---------- FIRST ROW: PIE + HEATMAP ----------
   fluidRow(
     column(
@@ -74,7 +64,7 @@ ui <- fluidPage(
     column(
       12,
       h4("Distribution of Selected Metric"),
-      plotOutput("histrogram", height = "400px")
+      plotOutput("histogram", height = "400px")
     )
   ),
   
@@ -133,19 +123,6 @@ server <- function(input, output) {
         y = "Number of States"
       ) +
       theme_minimal()
-  })
-  
-  # ---------- STORY ----------
-  output$story <- renderText({
-    
-    paste(
-      "After applying filters for population density and smoking rate,",
-      "the dashboard reveals substantial variation in", input$metric,
-      "across U.S. states.",
-      "The heat map highlights geographic concentration,",
-      "the pie chart shows that a few states dominate the overall burden,",
-      "and the histogram confirms a skewed distribution rather than uniform impact."
-    )
   })
 }
 
