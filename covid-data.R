@@ -1,129 +1,193 @@
-    # ---------- library ----------
-library(shiny)
-library(ggplot2)
-library(readr)
-library(tidyverse)
-library(dplyr)    
-    #--------- Load data-----------
-covid <- read_csv("COVID19_state.csv", show_col_types = FALSE)
-ui <- fluidPage(
-  
-  titlePanel("State-Level COVID-19 Impact Dashboard"),
-  
-   # ---------- TOP FILTER BAR ----------
-  fluidRow(
-    column(
-      4,
-      selectInput(
-        "metric",
-        "Select COVID Metric:",
-        choices = c("Tested", "Infected", "Deaths")
-      )
-    ),
-    column(
-      4,
-      sliderInput(
-        "density",
-        "Population Density:",
-        min = min(covid$`Pop Density`),
-        max = max(covid$`Pop Density`),
-        value = c(min(covid$`Pop Density`), max(covid$`Pop Density`))
-      )
-    ),
-    column(
-      4,
-      sliderInput(
-        "smoking",
-        "Smoking Rate:",
-        min = min(covid$`Smoking Rate`),
-        max = max(covid$`Smoking Rate`),
-        value = c(min(covid$`Smoking Rate`), max(covid$`Smoking Rate`))
-      )
-    )
-  ),
-  
-  hr(),
-  # ---------- FIRST ROW: PIE + HEATMAP ----------
-  fluidRow(
-    column(
-      6,
-      h4("Top 10 States Contribution"),
-      plotOutput("piechart", height = "400px")
-    ),
-    column(
-      6,
-      h4("Heat Map: COVID Impact Across States"),
-      plotOutput("heatmap", height = "400px")
-    )
-  ),
-  
-  hr(),
-  
-  # ---------- SECOND ROW: HISTOGRAM ----------
-  fluidRow(
-    column(
-      12,
-      h4("Distribution of Selected Metric"),
-      plotOutput("histogram", height = "400px")
-    )
-  ),
-  
-  hr(),
+#-------INSTALL PACKAGES------
+
+pacman::p_load(
+  shiny,
+  tidyverse,
+  readr,
+  ggplot2,
+  dplyr,
+  janitor,
+  plotly
 )
+
+#------LOAD DATA---------
+
+covid_raw <- read_csv("COVID19_state.csv")
+
+#-------CLEAN DATA-------
+
+covid_clean <- covid_raw %>%
+  clean_names() %>%
+  mutate(
+    infection_rate = infected / population * 100000,
+    death_rate = deaths / population * 100000
+  ) %>%
+  select(
+    state, tested, infected, deaths, population,
+    infection_rate, death_rate, income, gdp,
+    unemployment, icu_beds, pollution, urban
+  ) %>%
+  drop_na()
+
+#-------SHINY USER INTERFACE---------
+
+ui <- navbarPage(
+  title = "COVID-19 Interactive Dashboard",
+  
+  # ---- TAB 1: Infection vs Death ----
+  tabPanel(
+    "Infection vs Death",
+    sidebarLayout(
+      sidebarPanel(
+        sliderInput(
+          "income_filter",
+          "Income Range:",
+          min = min(covid_clean$income),
+          max = max(covid_clean$income),
+          value = range(covid_clean$income)
+        ),
+        sliderInput(
+          "population_filter",
+          "Population Range:",
+          min = min(covid_clean$population),
+          max = max(covid_clean$population),
+          value = range(covid_clean$population)
+        )
+      ),
+      mainPanel(
+        plotlyOutput("scatter_plot")
+      )
+    )
+  ),
+  
+  # ---- TAB 2: ICU Capacity Bar Chart ----
+  tabPanel(
+    "ICU Capacity",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          "state_filter",
+          "Select States:",
+          choices = unique(covid_clean$state),
+          multiple = TRUE,
+          selected = unique(covid_clean$state)[1:5]
+        ),
+        sliderInput(
+          "icu_filter",
+          "ICU Beds Range:",
+          min = min(covid_clean$icu_beds),
+          max = max(covid_clean$icu_beds),
+          value = range(covid_clean$icu_beds)
+        )
+      ),
+      mainPanel(
+        plotlyOutput("icu_bar")
+      )
+    )
+  ),
+  
+  # ---- TAB 3: Pollution Pie Chart ----
+  tabPanel(
+    "Pollution Pie Chart",
+    sidebarLayout(
+      sidebarPanel(
+        sliderInput(
+          "pollution_filter",
+          "Pollution Range:",
+          min = min(covid_clean$pollution),
+          max = max(covid_clean$pollution),
+          value = range(covid_clean$pollution)
+        ),
+        sliderInput(
+          "income_filter2",
+          "Income Range:",
+          min = min(covid_clean$income),
+          max = max(covid_clean$income),
+          value = range(covid_clean$income)
+        )
+      ),
+      mainPanel(
+        plotlyOutput("pollution_pie")
+      )
+    )
+  )
+)
+
+#-------SHINY SERVER-------
 
 server <- function(input, output) {
   
-  # ---------- FILTERED DATA ----------
-  filtered_data <- reactive({
-    covid[
-      covid$`Pop Density` >= input$density[1] &
-        covid$`Pop Density` <= input$density[2] &
-        covid$`Smoking Rate` >= input$smoking[1] &
-        covid$`Smoking Rate` <= input$smoking[2],
-    ]
-  })
-  
-  # ---------- PIE CHART ----------
-  output$piechart <- renderPlot({
+  # TAB 1: Scatter plot Infection vs Death
+  output$scatter_plot <- renderPlotly({
+    data_scatter <- covid_clean %>%
+      filter(
+        income >= input$income_filter[1],
+        income <= input$income_filter[2],
+        population >= input$population_filter[1],
+        population <= input$population_filter[2]
+      )
     
-    top_states <- filtered_data()
-    top_states <- top_states[order(-top_states[[input$metric]]), ]
-    top_states <- head(top_states, 10)
-    
-    ggplot(top_states,
-           aes(x = "", y = .data[[input$metric]], fill = State)) +
-      geom_col(width = 1) +
-      coord_polar("y") +
-      theme_void()
-  })
-  
-  # ---------- HEAT MAP ----------
-  output$heatmap <- renderPlot({
-    
-    ggplot(filtered_data(),
-           aes(x = State, y = input$metric, fill = .data[[input$metric]])) +
-      geom_tile() +
-      coord_flip() +
+    p <- ggplot(data_scatter, aes(x = infection_rate, y = death_rate)) +
+      geom_point(color = "firebrick", size = 3) +
       labs(
+        title = "Infection Rate vs Death Rate",
+        x = "Infection Rate (per 100,000)",
+        y = "Death Rate (per 100,000)"
+      ) +
+      theme_minimal()
+    
+    ggplotly(p)
+  })
+  
+  # TAB 2: ICU Capacity Bar Chart
+  output$icu_bar <- renderPlotly({
+    data_icu <- covid_clean %>%
+      filter(
+        state %in% input$state_filter,
+        icu_beds >= input$icu_filter[1],
+        icu_beds <= input$icu_filter[2]
+      )
+    
+    p <- ggplot(data_icu, aes(x = state, y = icu_beds)) +
+      geom_col(fill = "darkgreen") +
+      labs(
+        title = "ICU Beds by State",
         x = "State",
-        y = "",
-        fill = input$metric
+        y = "Number of ICU Beds"
       ) +
       theme_minimal()
+    
+    ggplotly(p)
   })
   
-  # ---------- HISTOGRAM ----------
-  output$histogram <- renderPlot({
+  # TAB 3: Pollution Pie Chart
+  output$pollution_pie <- renderPlotly({
     
-    ggplot(filtered_data(),
-           aes(x = .data[[input$metric]])) +
-      geom_histogram(bins = 15) +
-      labs(
-        x = input$metric,
-        y = "Number of States"
-      ) +
-      theme_minimal()
+    data_pie <- covid_clean %>%
+      filter(
+        pollution >= input$pollution_filter[1],
+        pollution <= input$pollution_filter[2],
+        income >= input$income_filter2[1],
+        income <= input$income_filter2[2]
+      ) %>%
+      group_by(state) %>%
+      summarise(total_pollution = sum(pollution, na.rm = TRUE)) %>%
+      ungroup()
+    
+    # Plotly pie chart
+    plot_ly(
+      data_pie,
+      labels = ~state,
+      values = ~total_pollution,
+      type = "pie",
+      textinfo = "label+percent",
+      insidetextorientation = "radial"
+    ) %>%
+      layout(title = "Pollution Distribution by State")
+    
   })
 }
+
+# 6. RUN THE SHINY APP
 
 shinyApp(ui = ui, server = server)
