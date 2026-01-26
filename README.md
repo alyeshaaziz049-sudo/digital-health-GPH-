@@ -1,6 +1,6 @@
 ## COVID-19 State level Data Visualization:
 -------------------------------------------
-This repository contains a simple **R Shiny dashboard** made to explore COVID-19 data at the state level. It shows COVID-19 infections, deaths, ICU beds, and pollution using interactive charts.
+This repository contains a simple **R Shiny Application** which can be used to explore COVID-19 data at the state level. It shows COVID-19 infections, deaths, ICU beds, and pollution using different plots with incorporated filters.
 
 The Shiny App will show:
 
@@ -28,13 +28,13 @@ CSV file called `COVID19_state.csv`. It includes:
 * Pollution levels
 * other indicators
 
-Some new values (infection rate and death rate per 100,000 people) are calculated inside the code.
+new values including infection rate and death rate per 100,000 people are calculated in the code.
 
 -----------------------------------
 
 ## Packages
 
-The project is made in **R** using these packages:
+The project is made in **R** using following packages:
 
 * pacman __ for package management
 * shiny __ for building the interactive web application
