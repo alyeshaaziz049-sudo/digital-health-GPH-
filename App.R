@@ -91,19 +91,19 @@ ui <- navbarPage(
     "Pollution Pie Chart",
     sidebarLayout(
       sidebarPanel(
+        selectInput(
+          "state_filter_pie",
+          "Select States:",
+          choices = unique(covid_clean$state),
+          multiple = TRUE,
+          selected = unique(covid_clean$state)[1:5]
+        ),
         sliderInput(
           "pollution_filter",
           "Pollution Range:",
           min = min(covid_clean$pollution),
           max = max(covid_clean$pollution),
           value = range(covid_clean$pollution)
-        ),
-        sliderInput(
-          "income_filter2",
-          "Income Range:",
-          min = min(covid_clean$income),
-          max = max(covid_clean$income),
-          value = range(covid_clean$income)
         )
       ),
       mainPanel(
@@ -165,26 +165,28 @@ server <- function(input, output) {
     
     data_pie <- covid_clean %>%
       filter(
+        state %in% input$state_filter_pie,
         pollution >= input$pollution_filter[1],
-        pollution <= input$pollution_filter[2],
-        income >= input$income_filter2[1],
-        income <= input$income_filter2[2]
+        pollution <= input$pollution_filter[2]
       ) %>%
       group_by(state) %>%
-      summarise(total_pollution = sum(pollution, na.rm = TRUE)) %>%
-      ungroup()
+      summarise(
+        total_pollution = sum(pollution, na.rm = TRUE),
+        .groups = "drop"
+      )
     
-    # Plotly pie chart
     plot_ly(
-      data_pie,
+      data = data_pie,
       labels = ~state,
       values = ~total_pollution,
       type = "pie",
-      textinfo = "label+percent",
-      insidetextorientation = "radial"
+      textinfo = "percent",     
+      hoverinfo = "label+value+percent"
     ) %>%
-      layout(title = "Pollution Distribution by State")
-    
+      layout(
+        title = "Pollution Distribution by State",
+        showlegend = TRUE
+      )
   })
 }
 
