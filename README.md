@@ -61,9 +61,10 @@ The project is made in **R** using following packages:
 ## Files in This Repository
 
 ```
-COVID19_state.csv    # Dataset
-app.R                # Shiny app code
-README.md            # Project description
+COVID19_state.csv           # Dataset
+app.R                       # Shiny app code
+README.md                   # Project description
+COVID_19 State-level Data visualizations.pdf   #report
 ```
 
 ------------------------------------------
