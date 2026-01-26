@@ -38,7 +38,7 @@ covid_clean <- covid_raw %>%       #cleaning the file containing original data.
 
 ui <- navbarPage(             #to create multiple tabs
   
-  title = "COVID-19 Interactive Dashboard",
+  title = "COVID-19 State-Level Data Visualization",
   
   # ---- TAB 1: Infection vs Death ----
   tabPanel(
