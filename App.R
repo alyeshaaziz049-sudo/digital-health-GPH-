@@ -12,50 +12,60 @@ pacman::p_load(
 
 #------LOAD DATA---------
 
-covid_raw <- read_csv("COVID19_state.csv")
+covid_raw <- read_csv("COVID19_state.csv")     #file containing covid-19 state level data
 
 #-------CLEAN DATA-------
 
-covid_clean <- covid_raw %>%
-  clean_names() %>%
-  mutate(
-    infection_rate = infected / population * 100000,
-    death_rate = deaths / population * 100000
+covid_clean <- covid_raw %>%       #cleaning the file containing original data.
+  
+  clean_names() %>%              #to convert column names to lowercase and remove spaces
+  
+  mutate(                        #to create new variables
+    
+    infection_rate = infected / population * 100000,  #infected cases per 100,000 population
+    
+    death_rate = deaths / population * 100000         # deaths per 100,00 population
   ) %>%
-  select(
+  select(                         
     state, tested, infected, deaths, population,
     infection_rate, death_rate, income, gdp,
     unemployment, icu_beds, pollution, urban
-  ) %>%
-  drop_na()
+  ) %>%                                      #to keep values needed for visualization
+  
+  drop_na()                   #to remove rows with missing values
 
 #-------SHINY USER INTERFACE---------
 
-ui <- navbarPage(
+ui <- navbarPage(             #to create multiple tabs
+  
   title = "COVID-19 Interactive Dashboard",
   
   # ---- TAB 1: Infection vs Death ----
   tabPanel(
     "Infection vs Death",
-    sidebarLayout(
-      sidebarPanel(
-        sliderInput(
+    sidebarLayout(             
+      sidebarPanel(           
+        sliderInput(          #filter data based on income range
+          
           "income_filter",
           "Income Range:",
-          min = min(covid_clean$income),
-          max = max(covid_clean$income),
-          value = range(covid_clean$income)
+          min = min(covid_clean$income),    #minimum income value
+          
+          max = max(covid_clean$income),    #maximum income value
+          
+          value = range(covid_clean$income)  
         ),
-        sliderInput(
+        sliderInput(          #filter states by population size
+          
           "population_filter",
           "Population Range:",
-          min = min(covid_clean$population),
+          min = min(covid_clean$population), 
           max = max(covid_clean$population),
           value = range(covid_clean$population)
         )
       ),
       mainPanel(
-        plotlyOutput("scatter_plot")
+        plotlyOutput("scatter_plot")   #the output plot
       )
     )
   ),
@@ -65,14 +75,16 @@ ui <- navbarPage(
     "ICU Capacity",
     sidebarLayout(
       sidebarPanel(
-        selectInput(
+        selectInput(            #to choose various states
+          
           "state_filter",
           "Select States:",
-          choices = unique(covid_clean$state),
+          choices = unique(covid_clean$state),   #any state which is available
           multiple = TRUE,
-          selected = unique(covid_clean$state)[1:5]
+          selected = unique(covid_clean$state)[1:5]    #choosing 5 for default use
         ),
-        sliderInput(
+        sliderInput(              #to filter ICU beds
+          
           "icu_filter",
           "ICU Beds Range:",
           min = min(covid_clean$icu_beds),
@@ -81,7 +93,7 @@ ui <- navbarPage(
         )
       ),
       mainPanel(
-        plotlyOutput("icu_bar")
+        plotlyOutput("icu_bar")    #output chart
       )
     )
   ),
@@ -91,14 +103,16 @@ ui <- navbarPage(
     "Pollution Pie Chart",
     sidebarLayout(
       sidebarPanel(
-        selectInput(
+        selectInput(            #to select states
+          
           "state_filter_pie",
           "Select States:",
           choices = unique(covid_clean$state),
           multiple = TRUE,
-          selected = unique(covid_clean$state)[1:5]
+          selected = unique(covid_clean$state)[1:5]     # 5 states as default
         ),
-        sliderInput(
+        sliderInput(            #to filter pollution values
+          
           "pollution_filter",
           "Pollution Range:",
           min = min(covid_clean$pollution),
@@ -107,7 +121,7 @@ ui <- navbarPage(
         )
       ),
       mainPanel(
-        plotlyOutput("pollution_pie")
+        plotlyOutput("pollution_pie")     #output chart
       )
     )
   )
@@ -127,14 +141,16 @@ server <- function(input, output) {
         population <= input$population_filter[2]
       )
     
-    p <- ggplot(data_scatter, aes(x = infection_rate, y = death_rate)) +
+    p <- ggplot(                   #to create scatter plot using ggplot2
+      
+      data_scatter, aes(x = infection_rate, y = death_rate)) +
       geom_point(color = "firebrick", size = 3) +
       labs(
         title = "Infection Rate vs Death Rate",
         x = "Infection Rate (per 100,000)",
         y = "Death Rate (per 100,000)"
       ) +
-      theme_minimal()
+      theme_minimal()             #for clean visuals
     
     ggplotly(p)
   })
@@ -148,8 +164,10 @@ server <- function(input, output) {
         icu_beds <= input$icu_filter[2]
       )
     
-    p <- ggplot(data_icu, aes(x = state, y = icu_beds)) +
-      geom_col(fill = "darkgreen") +
+    p <- ggplot(                 #create bar graph
+      
+      data_icu, aes(x = state, y = icu_beds)) +
+      geom_col(fill = "darkgreen") +            
       labs(
         title = "ICU Beds by State",
         x = "State",
@@ -169,13 +187,13 @@ server <- function(input, output) {
         pollution >= input$pollution_filter[1],
         pollution <= input$pollution_filter[2]
       ) %>%
-      group_by(state) %>%
+      group_by(state) %>%       #same states in one group   
       summarise(
-        total_pollution = sum(pollution, na.rm = TRUE),
-        .groups = "drop"
+        total_pollution = sum(pollution, na.rm = TRUE),  #na.rm to remove any missing values
+        .groups = "drop"        #to dismiss grouping 
       )
     
-    plot_ly(
+    plot_ly(          #to create pie chart using plotly
       data = data_pie,
       labels = ~state,
       values = ~total_pollution,
@@ -192,4 +210,4 @@ server <- function(input, output) {
 
 # 6. RUN THE SHINY APP
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server)    #to launch the app
