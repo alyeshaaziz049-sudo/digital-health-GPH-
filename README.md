@@ -18,7 +18,7 @@ All charts are interactive, so users can hover over them to see values.
 
 ## Dataset
 
-CSV file called `COVID19_state.csv`. It includes:
+Data is taken from CSV file called `COVID19_state.csv`. It includes:
 
 * State name
 * Number of COVID-19 tests, infections, and deaths
